@@ -9,14 +9,16 @@ import ActivitiesView from '@/components/views/ActivitiesView';
 import RafflesView from '@/components/views/RafflesView';
 import NutritionView from '@/components/views/NutritionView';
 import HealthView from '@/components/views/HealthView';
-import SettingsView from '@/components/views/SettingsView';
 
 const AdminLayout = ({
   currentView, setCurrentView, handleLogout,
-  elders, activities, setActivities, stats,
+  elders, setElders, activities, setActivities, stats,
   onEditElder, onDeleteElder, onAddElder, onViewElder,
   onAddActivity, onEditActivity, onViewActivity,
-  onAddRaffle, onEditRaffle, onViewRaffle,
+  onAddRaffle, onEditRaffle, onViewRaffle, onDrawRaffleWinner,
+  onSaveNutritionBeneficiaries,
+  onSaveHealthRecord, 
+  onOpenHealthModal, 
   toast,
   filteredElders, searchTerm, setSearchTerm, filterStatus, setFilterStatus
 }) => {
@@ -29,7 +31,6 @@ const AdminLayout = ({
     raffles: 'Gestión de Rifas',
     nutrition: 'Bolsas de Nutrición',
     health: 'Gestión de Salud',
-    settings: 'Ajustes del Sistema'
   };
   
   const renderView = () => {
@@ -65,21 +66,26 @@ const AdminLayout = ({
                   onAdd={onAddRaffle}
                   onEdit={onEditRaffle}
                   onView={onViewRaffle}
+                  onDrawWinner={onDrawRaffleWinner}
                   elders={elders}
                   setActivities={setActivities}
                   toast={toast}
                 />;
       case 'nutrition':
-        return <NutritionView key="nutrition" elders={elders} setElders={(updatedElders) => {
-          const newElders = elders.map(e => updatedElders.find(ue => ue.id === e.id) || e);
-          // This is a bit of a hack, but without a central state management, it's tricky.
-          // Ideally, useApp hook would provide a setElders function.
-          window.location.reload(); // Force reload to reflect changes, not ideal.
-        }} toast={toast} />;
+        return <NutritionView 
+                  key="nutrition" 
+                  elders={elders} 
+                  setElders={setElders}
+                  onSave={onSaveNutritionBeneficiaries} 
+                  toast={toast} 
+                />;
       case 'health':
-        return <HealthView key="health" elders={elders} toast={toast} />;
-      case 'settings':
-        return <SettingsView key="settings" toast={toast} />;
+        return <HealthView 
+                  key="health" 
+                  elders={elders} 
+                  onOpenModal={onOpenHealthModal} // Pass the function to open the modal
+                  toast={toast} 
+                />;
       default:
         return <DashboardView key="dashboard" stats={stats} elders={elders} activities={activities} />;
     }
@@ -88,7 +94,7 @@ const AdminLayout = ({
   return (
     <>
       <Helmet>
-        <title>{viewTitles[currentView]} - Sistema de Gestión UPTAG</title>
+        <title>{viewTitles[currentView] || 'Panel Principal'} - Sistema de Gestión UPTAG</title>
         <meta name="description" content={`Panel de administración: ${viewTitles[currentView]}`} />
       </Helmet>
       

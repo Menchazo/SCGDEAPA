@@ -3,24 +3,20 @@ import { motion } from 'framer-motion';
 import { Plus, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-function HealthView({ elders, toast }) {
-
-  const handleFeatureNotImplemented = (description) => {
-    toast({
-      title: "Acción registrada (Simulación)",
-      description: description,
-    });
-  };
+function HealthView({ elders, onOpenModal, toast }) {
 
   const eldersWithConditions = elders.filter(
-    elder => elder.pathologies.length > 0 || elder.disabilities.length > 0
+    elder => 
+      (elder.pathologies && elder.pathologies.length > 0) || 
+      (elder.disabilities && elder.disabilities.length > 0) || 
+      (elder.medications && elder.medications.length > 0)
   );
 
   const renderTabContent = () => {
     return (
       <div className="glass-effect rounded-xl p-6">
         <h3 className="text-lg font-semibold text-gray-800 mb-4">
-          Adultos Mayores con Condiciones de Salud ({eldersWithConditions.length})
+          Adultos Mayores con Registros de Salud ({eldersWithConditions.length})
         </h3>
         <div className="space-y-4 max-h-[60vh] overflow-y-auto scrollbar-thin">
           {eldersWithConditions.map(elder => (
@@ -39,7 +35,7 @@ function HealthView({ elders, toast }) {
                     <p className="text-sm text-gray-600">{elder.cedula}</p>
                   </div>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => handleFeatureNotImplemented(`Nuevo registro de salud para ${elder.name}.`)}>
+                <Button variant="outline" size="sm" onClick={() => onOpenModal('add-health-record', elder)}>
                   <Plus className="w-4 h-4 mr-2" />
                   Agregar Registro
                 </Button>
@@ -48,19 +44,19 @@ function HealthView({ elders, toast }) {
                 <div>
                   <h4 className="font-medium text-sm text-gray-500 mb-1">Patologías</h4>
                   <div className="flex flex-wrap gap-1">
-                    {elder.pathologies.length > 0 ? elder.pathologies.map((p, i) => <span key={i} className="badge badge-danger">{p}</span>) : <span className="text-xs text-gray-400">Ninguna</span>}
+                    {elder.pathologies && elder.pathologies.length > 0 ? elder.pathologies.map((p, i) => <span key={i} className="badge badge-danger">{p}</span>) : <span className="text-xs text-gray-400">Ninguna</span>}
                   </div>
                 </div>
                 <div>
                   <h4 className="font-medium text-sm text-gray-500 mb-1">Discapacidades</h4>
                   <div className="flex flex-wrap gap-1">
-                    {elder.disabilities.length > 0 ? elder.disabilities.map((d, i) => <span key={i} className="badge badge-primary">{d}</span>) : <span className="text-xs text-gray-400">Ninguna</span>}
+                    {elder.disabilities && elder.disabilities.length > 0 ? elder.disabilities.map((d, i) => <span key={i} className="badge badge-primary">{d}</span>) : <span className="text-xs text-gray-400">Ninguna</span>}
                   </div>
                 </div>
                 <div>
                   <h4 className="font-medium text-sm text-gray-500 mb-1">Medicamentos</h4>
                   <div className="flex flex-wrap gap-1">
-                    {elder.medications.length > 0 ? elder.medications.map((m, i) => <span key={i} className="badge badge-success">{m}</span>) : <span className="text-xs text-gray-400">Ninguno</span>}
+                    {elder.medications && elder.medications.length > 0 ? elder.medications.map((m, i) => <span key={i} className="badge badge-success">{m}</span>) : <span className="text-xs text-gray-400">Ninguno</span>}
                   </div>
                 </div>
               </div>
@@ -80,7 +76,7 @@ function HealthView({ elders, toast }) {
     >
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-800">Gestión de Salud</h2>
-        <Button onClick={() => handleFeatureNotImplemented('Se ha asignado un nuevo tratamiento general.')} className="btn-primary">
+        <Button onClick={() => onOpenModal('assign-health-treatment')} className="btn-primary">
           <UserPlus className="w-4 h-4 mr-2" />
           Asignar Tratamiento
         </Button>

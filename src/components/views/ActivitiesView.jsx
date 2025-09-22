@@ -1,10 +1,65 @@
-
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Calendar, Edit, Eye, Users } from 'lucide-react';
+import { Plus, Calendar, Edit, Eye, Users, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 function ActivitiesView({ activities, onAdd, onEdit, onView, elders }) {
+
+  const handlePrint = (activity) => {
+    const participantsDetails = activity.participants
+      ?.map(id => elders.find(e => e.id === id))
+      .filter(Boolean); // Ensure no undefined entries if an elder is deleted
+
+    const printContent = `
+      <html>
+        <head>
+          <title>Lista de Asistencia: ${activity.title}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 2rem; color: #333; }
+            h1, h2 { text-align: center; }
+            h1 { font-size: 1.5rem; }
+            h2 { font-size: 1.2rem; font-weight: normal; margin-bottom: 2rem; }
+            table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; }
+            th, td { border: 1px solid #ccc; padding: 0.75rem; text-align: left; }
+            th { background-color: #f4f4f4; }
+            .signature-col { height: 3rem; }
+          </style>
+        </head>
+        <body>
+          <h1>Lista de Asistencia</h1>
+          <h2>Actividad: ${activity.title}</h2>
+          <p><strong>Fecha:</strong> ${new Date(activity.date).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })}</p>
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 40%;">Nombre y Apellido</th>
+                <th style="width: 25%;">Cédula</th>
+                <th style="width: 35%;">Firma</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${participantsDetails && participantsDetails.length > 0
+                ? participantsDetails.map(p => `
+                  <tr>
+                    <td>${p.name}</td>
+                    <td>${p.cedula}</td>
+                    <td class="signature-col"></td>
+                  </tr>
+                `).join('')
+                : '<tr><td colspan="3" style="text-align: center;">No hay participantes inscritos.</td></tr>'
+              }
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    printWindow.print();
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -48,7 +103,7 @@ function ActivitiesView({ activities, onAdd, onEdit, onView, elders }) {
               </div>
             </div>
 
-            <div className="flex space-x-2">
+            <div className="flex flex-wrap gap-2">
               <Button variant="outline" size="sm" onClick={() => onEdit(activity)}>
                 <Edit className="w-4 h-4 mr-1" />
                 Editar
@@ -56,6 +111,10 @@ function ActivitiesView({ activities, onAdd, onEdit, onView, elders }) {
               <Button variant="outline" size="sm" onClick={() => onView(activity)}>
                 <Eye className="w-4 h-4 mr-1" />
                 Ver Detalles
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => handlePrint(activity)}>
+                <Printer className="w-4 h-4 mr-1" />
+                Imprimir Asistencia
               </Button>
             </div>
           </div>

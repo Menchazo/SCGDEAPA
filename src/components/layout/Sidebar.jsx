@@ -1,8 +1,8 @@
 import React from 'react';
-import { Users, Calendar, Gift, Heart, Shield, LogOut, Activity, X, Settings } from 'lucide-react';
+import { Users, Calendar, Gift, Heart, Shield, LogOut, Activity, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-const UPTAG_LOGO_URL = "https://storage.googleapis.com/hostinger-horizons-assets-prod/bbd358f7-9965-4a13-9071-ba86ab3447e4/3a354a1a5d6defd8cfc9233a147ffbc9.jpg";
+const UPTAG_LOGO_URL = "https://i.ibb.co/zTmjVWkm/Logo-UPTAG-NB.png";
 
 const Sidebar = ({ currentView, setCurrentView, handleLogout, sidebarOpen, setSidebarOpen }) => {
   const navItems = [
@@ -12,7 +12,6 @@ const Sidebar = ({ currentView, setCurrentView, handleLogout, sidebarOpen, setSi
     { id: 'raffles', label: 'Rifas', icon: Gift },
     { id: 'nutrition', label: 'Nutrición', icon: Heart },
     { id: 'health', label: 'Salud', icon: Shield },
-    { id: 'settings', label: 'Ajustes', icon: Settings }
   ];
 
   const handleNavClick = (view) => {

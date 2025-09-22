@@ -1,9 +1,10 @@
+
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { Search, User, Users, CheckCircle, Heart, Calendar as CalendarIcon, X, BarChart2, CalendarDays, Gift, Shield } from 'lucide-react';
+import { Search, User, Users, CheckCircle, Heart, Calendar as CalendarIcon, X, Briefcase, GraduationCap, Database, Code, Wind, Zap, MapPin, Move } from 'lucide-react';
 
-const UPTAG_LOGO_URL = "https://storage.googleapis.com/hostinger-horizons-assets-prod/bbd358f7-9965-4a13-9071-ba86ab3447e4/3a354a1a5d6defd8cfc9233a147ffbc9.jpg";
+const UPTAG_LOGO_URL = "https://i.ibb.co/zTmjVWkm/Logo-UPTAG-NB.png";
 
 const StatCard = ({ icon, label, value, color }) => {
   const Icon = icon;
@@ -20,8 +21,24 @@ const StatCard = ({ icon, label, value, color }) => {
   );
 };
 
+const TechCard = ({ icon, name, description, color }) => {
+    const Icon = icon;
+    return (
+        <div className="flex items-center space-x-4 p-4 bg-white/60 rounded-lg shadow-sm backdrop-blur-sm">
+            <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${color}`}>
+                <Icon className="w-6 h-6 text-white" />
+            </div>
+            <div>
+                <h4 className="font-bold text-gray-800">{name}</h4>
+                <p className="text-sm text-gray-600">{description}</p>
+            </div>
+        </div>
+    );
+};
+
 const Calendar = ({ activities }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(null);
 
   const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
   const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
@@ -46,7 +63,20 @@ const Calendar = ({ activities }) => {
       newDate.setMonth(prev.getMonth() + offset);
       return newDate;
     });
+    setSelectedDate(null);
   };
+
+  const handleDayClick = (day) => {
+    const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+    if (activitiesByDate[date.toDateString()]) {
+        setSelectedDate(date);
+    }
+  };
+
+  const selectedActivities = useMemo(() => {
+    if (!selectedDate) return [];
+    return activitiesByDate[selectedDate.toDateString()] || [];
+  }, [selectedDate, activitiesByDate]);
 
   return (
     <div className="glass-effect rounded-xl p-6 w-full">
@@ -68,17 +98,47 @@ const Calendar = ({ activities }) => {
         {days.map(day => {
           const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day).toDateString();
           const hasEvent = !!activitiesByDate[date];
+          const isSelected = selectedDate && selectedDate.toDateString() === date;
           return (
-            <div key={day} className={`calendar-day ${hasEvent ? 'has-event' : ''} ${new Date().toDateString() === date ? 'today' : ''}`}>
+            <div 
+              key={day} 
+              className={`calendar-day ${hasEvent ? 'has-event' : ''} ${new Date().toDateString() === date ? 'today' : ''} ${isSelected ? 'selected' : ''}`}
+              onClick={() => handleDayClick(day)}
+            >
               {day}
             </div>
           );
         })}
       </div>
+      <AnimatePresence>
+        {selectedDate && selectedActivities.length > 0 && (
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            className="mt-4 pt-4 border-t border-white/20"
+          >
+            <div className="flex justify-between items-center mb-2">
+                <h4 className="font-semibold text-gray-700">
+                    Actividades para el {selectedDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}
+                </h4>
+                <Button variant="ghost" size="icon" onClick={() => setSelectedDate(null)}><X className="w-4 h-4" /></Button>
+            </div>
+            <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
+              {selectedActivities.map(activity => (
+                <div key={activity.id} className={`p-3 rounded-lg activity-card activity-${activity.type}`}>
+                  <p className="font-semibold">{activity.title}</p>
+                  <p className="text-sm text-gray-700">{activity.description}</p>
+                  <p className="text-sm font-medium text-gray-800">Hora: {activity.time}</p>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
-
 
 const PublicPage = ({ elders, activities, stats, onAdminLogin }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -207,7 +267,6 @@ const PublicPage = ({ elders, activities, stats, onAdminLogin }) => {
         )}
         </AnimatePresence>
 
-
         <div className="pt-8">
             <div className="text-center mb-8">
                 <h2 className="text-3xl font-bold text-gray-800">Estadísticas Comunitarias</h2>
@@ -225,6 +284,60 @@ const PublicPage = ({ elders, activities, stats, onAdminLogin }) => {
            <Calendar activities={activities} />
         </div>
 
+        <div className="pt-12">
+            <div className="glass-effect rounded-xl p-8">
+                <div className="text-center mb-8">
+                    <h2 className="text-3xl font-bold text-gray-800">Sobre el Proyecto</h2>
+                    <p className="text-lg text-gray-600 mt-2 max-w-3xl mx-auto">
+                        Esta aplicación fue desarrollada como una solución tecnológica para la gestión de datos de los adultos mayores en el Consejo Comunal Territorio Social Pantano Abajo I.
+                        El objetivo es optimizar los procesos, asegurar un seguimiento adecuado y mejorar la calidad de vida de nuestra valiosa comunidad.
+                    </p>
+                </div>
+
+                <div className="pt-8 border-t border-white/20">
+                    <div className="text-center mb-8">
+                        <h2 className="text-3xl font-bold text-gray-800">El Corazón del Sistema: Tecnologías</h2>
+                        <p className="text-lg text-gray-600 mt-2 max-w-3xl mx-auto">
+                            Para construir este portal, se utilizó un conjunto de tecnologías modernas y eficientes, asegurando una experiencia de usuario rápida, segura y agradable.
+                        </p>
+                    </div>
+                    <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <TechCard icon={Code} name="React" description="Biblioteca líder para construir interfaces de usuario interactivas." color="bg-sky-500" />
+                        <TechCard icon={Database} name="Supabase" description="Backend y base de datos (PostgreSQL) para gestionar toda la información de forma segura." color="bg-green-500" />
+                        <TechCard icon={Wind} name="Tailwind CSS" description="Framework de CSS para un diseño moderno y responsivo." color="bg-cyan-500" />
+                        <TechCard icon={Zap} name="Vite" description="Entorno de desarrollo ultrarrápido para una experiencia de programación fluida." color="bg-purple-500" />
+                        <TechCard icon={MapPin} name="React Leaflet" description="Mapas interactivos para la geolocalización precisa de los beneficiarios." color="bg-lime-500" />
+                        <TechCard icon={Move} name="Framer Motion" description="Animaciones fluidas para una navegación más atractiva y dinámica." color="bg-pink-500" />
+                    </div>
+                </div>
+
+                <div className="pt-8 border-t border-white/20">
+                    <div className="text-center mb-8">
+                        <h2 className="text-3xl font-bold text-gray-800">Equipo de Desarrollo</h2>
+                    </div>
+                    <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="text-center p-6">
+                            <div className="w-24 h-24 rounded-full bg-gradient-to-r from-purple-500 to-indigo-500 flex items-center justify-center text-white mx-auto mb-4 shadow-lg">
+                                <GraduationCap className="w-12 h-12" />
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-800">Juliangie Ventura</h3>
+                            <p className="text-gray-600 mt-1">
+                                Estudiante del PNF Informática de la Universidad Politécnica Territorial de Falcón "Alonso Gamero" (UPTAG).
+                            </p>
+                        </div>
+                        <div className="text-center p-6">
+                            <div className="w-24 h-24 rounded-full bg-gradient-to-r from-pink-500 to-rose-500 flex items-center justify-center text-white mx-auto mb-4 shadow-lg">
+                                <GraduationCap className="w-12 h-12" />
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-800">Gladys Morles</h3>
+                            <p className="text-gray-600 mt-1">
+                                Estudiante del PNF Informática de la Universidad Politécnica Territorial de Falcón "Alonso Gamero" (UPTAG).
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
       </main>
     </div>
   );

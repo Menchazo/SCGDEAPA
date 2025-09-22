@@ -34,7 +34,8 @@ const toastVariants = cva(
 	},
 );
 
-const Toast = React.forwardRef(({ className, variant, ...props }, ref) => {
+// FIX: Prevent non-standard prop `dismiss` from being passed to the DOM element.
+const Toast = React.forwardRef(({ className, variant, dismiss, ...props }, ref) => {
 	return (
 		<ToastPrimitives.Root
 			ref={ref}

@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 
-const UPTAG_LOGO_URL = "https://storage.googleapis.com/hostinger-horizons-assets-prod/bbd358f7-9965-4a13-9071-ba86ab3447e4/3a354a1a5d6defd8cfc9233a147ffbc9.jpg";
+const UPTAG_LOGO_URL = "https://i.ibb.co/zTmjVWkm/Logo-UPTAG-NB.png";
 
 const Login = ({ onLogin, onBack }) => {
   return (
@@ -35,13 +35,13 @@ const Login = ({ onLogin, onBack }) => {
         <form onSubmit={onLogin} className="space-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Usuario
+              Correo Electrónico
             </label>
             <input
-              type="text"
-              name="username"
+              type="email"
+              name="email"
               className="input-field"
-              placeholder="Ingrese su usuario"
+              placeholder="Ingrese su correo electrónico"
               required
             />
           </div>
@@ -64,13 +64,6 @@ const Login = ({ onLogin, onBack }) => {
           </Button>
         </form>
 
-        <div className="mt-6 p-4 bg-orange-50 rounded-lg">
-          <p className="text-sm text-orange-700">
-            <strong>Credenciales de prueba:</strong><br />
-            Usuario: admin<br />
-            Contraseña: admin123
-          </p>
-        </div>
       </motion.div>
     </div>
   );

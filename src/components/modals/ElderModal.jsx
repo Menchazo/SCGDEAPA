@@ -3,6 +3,8 @@ import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { X, Plus, User, Camera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import MapInput from '@/components/ui/MapInput';
+import 'leaflet/dist/leaflet.css';
 
 function ElderModal({ type, elder, onSave, onClose }) {
   const [formData, setFormData] = useState({
@@ -11,6 +13,8 @@ function ElderModal({ type, elder, onSave, onClose }) {
     cedula: elder?.cedula || '',
     phone: elder?.phone || '',
     address: elder?.address || '',
+    latitude: elder?.latitude || null,
+    longitude: elder?.longitude || null,
     emergencyContact: elder?.emergencyContact || '',
     pathologies: elder?.pathologies || [],
     medications: elder?.medications || [],
@@ -28,6 +32,15 @@ function ElderModal({ type, elder, onSave, onClose }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     onSave(formData);
+  };
+
+  const handleLocationChange = (newLocation) => {
+    setFormData(prev => ({
+      ...prev,
+      latitude: newLocation.lat,
+      longitude: newLocation.lng,
+      address: newLocation.address || prev.address
+    }));
   };
 
   const handleAddItem = (field, value, setValue) => {
@@ -52,15 +65,17 @@ function ElderModal({ type, elder, onSave, onClose }) {
     }
   };
 
+  const isViewOnly = type === 'view';
+  
+  const locationValue = { lat: formData.latitude, lng: formData.longitude };
+
   const renderViewMode = () => (
     <div className="p-6 space-y-6">
       <div className="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-6">
         {elder.imageUrl ? (
           <img src={elder.imageUrl} alt={elder.name} className="w-24 h-24 rounded-full object-cover" />
         ) : (
-          <div className="w-24 h-24 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 flex items-center justify-center text-white">
-            <User className="w-12 h-12" />
-          </div>
+          <div className="w-24 h-24 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 flex items-center justify-center text-white"><User className="w-12 h-12" /></div>
         )}
         <div>
           <h3 className="text-2xl font-bold text-gray-800 text-center md:text-left">{elder.name}</h3>
@@ -72,16 +87,23 @@ function ElderModal({ type, elder, onSave, onClose }) {
         <div className="space-y-4">
           <div><label className="block text-sm font-medium text-gray-700 mb-1">Cédula</label><p className="text-gray-900">{elder.cedula}</p></div>
           <div><label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label><p className="text-gray-900">{elder.phone}</p></div>
-          <div><label className="block text-sm font-medium text-gray-700 mb-1">Dirección</label><p className="text-gray-900">{elder.address}</p></div>
-          <div><label className="block text-sm font-medium text-gray-700 mb-1">Contacto de Emergencia</label><p className="text-gray-900">{elder.emergencyContact}</p></div>
+          <div><label className="block text-sm font-medium text-gray-700 mb-1">Dirección</label><p className="text-gray-900 break-words">{elder.address || 'N/A'}</p></div>
         </div>
         <div className="space-y-4">
           <div><label className="block text-sm font-medium text-gray-700 mb-1">Estado</label><span className={`status-${elder.status}`}>{elder.status === 'active' ? 'Activo' : 'Inactivo'}</span></div>
           <div><label className="block text-sm font-medium text-gray-700 mb-1">Beneficiario de Nutrición</label><span className={elder.nutritionBeneficiary ? 'badge badge-success' : 'badge badge-danger'}>{elder.nutritionBeneficiary ? 'Sí' : 'No'}</span></div>
+          <div><label className="block text-sm font-medium text-gray-700 mb-1">Contacto de Emergencia</label><p className="text-gray-900">{elder.emergencyContact}</p></div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {elder.latitude && elder.longitude && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Ubicación Registrada</label>
+          <MapInput value={{ lat: elder.latitude, lng: elder.longitude }} isViewOnly={true} />
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
         <div>
           <h4 className="font-semibold text-gray-800 mb-2">Patologías</h4>
           <div className="space-y-1">{elder.pathologies.length > 0 ? elder.pathologies.map((p, i) => <span key={i} className="badge badge-danger block">{p}</span>) : <p className="text-gray-500 text-sm">Ninguna</p>}</div>
@@ -103,43 +125,46 @@ function ElderModal({ type, elder, onSave, onClose }) {
       <div className="form-section">
         <h3 className="section-title">Información Personal</h3>
         <div className="flex items-center space-x-6 mb-6">
-            <div className="relative">
-                {formData.imageUrl ? (
-                    <img src={formData.imageUrl} alt="Perfil" className="w-24 h-24 rounded-full object-cover" />
-                ) : (
-                    <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center">
-                        <User className="w-12 h-12 text-gray-400" />
-                    </div>
-                )}
-                <Button 
-                    type="button" 
-                    size="icon" 
-                    className="absolute bottom-0 right-0 rounded-full w-8 h-8 bg-orange-600 hover:bg-orange-700"
-                    onClick={() => fileInputRef.current.click()}
-                >
-                    <Camera className="w-4 h-4 text-white" />
-                </Button>
-                <input 
-                    type="file" 
-                    ref={fileInputRef} 
-                    className="hidden" 
-                    accept="image/*" 
-                    onChange={handleImageChange} 
-                />
-            </div>
-            <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Nombre Completo *</label>
-                <input type="text" className="input-field" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
-            </div>
+          <div className="relative">
+            {formData.imageUrl ? (
+                <img src={formData.imageUrl} alt="Perfil" className="w-24 h-24 rounded-full object-cover" />
+            ) : (
+                <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center"><User className="w-12 h-12 text-gray-400" /></div>
+            )}
+            <Button type="button" size="icon" className="absolute bottom-0 right-0 rounded-full w-8 h-8 bg-orange-600 hover:bg-orange-700" onClick={() => fileInputRef.current.click()}>
+                <Camera className="w-4 h-4 text-white" />
+            </Button>
+            <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageChange} />
+          </div>
+          <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Nombre Completo *</label>
+              <input type="text" className="input-field" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
+          </div>
         </div>
-
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div><label className="block text-sm font-medium text-gray-700 mb-2">Edad *</label><input type="number" className="input-field" value={formData.age} onChange={(e) => setFormData({ ...formData, age: parseInt(e.target.value) })} required /></div>
           <div><label className="block text-sm font-medium text-gray-700 mb-2">Cédula *</label><input type="text" className="input-field" value={formData.cedula} onChange={(e) => setFormData({ ...formData, cedula: e.target.value })} required /></div>
           <div><label className="block text-sm font-medium text-gray-700 mb-2">Teléfono</label><input type="text" className="input-field" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} /></div>
+          <div><label className="block text-sm font-medium text-gray-700 mb-2">Contacto de Emergencia</label><input type="text" className="input-field" value={formData.emergencyContact} onChange={(e) => setFormData({ ...formData, emergencyContact: e.target.value })} placeholder="Nombre - Teléfono" /></div>
         </div>
-        <div><label className="block text-sm font-medium text-gray-700 mb-2">Dirección</label><input type="text" className="input-field" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} /></div>
-        <div><label className="block text-sm font-medium text-gray-700 mb-2">Contacto de Emergencia</label><input type="text" className="input-field" value={formData.emergencyContact} onChange={(e) => setFormData({ ...formData, emergencyContact: e.target.value })} placeholder="Nombre - Teléfono" /></div>
+      </div>
+
+      <div className="form-section">
+        <h3 className="section-title">Ubicación y Dirección</h3>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Fijar Ubicación en el Mapa</label>
+          <MapInput value={locationValue} onChange={handleLocationChange} isViewOnly={isViewOnly} />
+        </div>
+        <div className="mt-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Dirección (autocompletada por el mapa)</label>
+          <textarea
+            className="input-field" 
+            value={formData.address}
+            onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+            placeholder="La dirección aparecerá aquí. Puede editarla o agregar detalles."
+            rows={3}
+          />
+        </div>
       </div>
 
       <div className="form-section">
@@ -199,7 +224,7 @@ function ElderModal({ type, elder, onSave, onClose }) {
             <X className="w-5 h-5" />
           </Button>
         </div>
-        {type === 'view' ? renderViewMode() : renderEditMode()}
+        {isViewOnly ? renderViewMode() : renderEditMode()}
       </motion.div>
     </motion.div>
   );

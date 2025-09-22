@@ -1,14 +1,69 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Edit, Check, X } from 'lucide-react';
+import { Edit, Check, X, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-function NutritionView({ elders, setElders, toast }) {
+function NutritionView({ elders, onSave, toast }) {
   const [isManaging, setIsManaging] = useState(false);
-  const [selectedElders, setSelectedElders] = useState(
-    elders.filter(e => e.nutritionBeneficiary).map(e => e.id)
-  );
+  const [selectedElders, setSelectedElders] = useState([]);
+
+  useEffect(() => {
+    setSelectedElders(elders.filter(e => e.nutritionBeneficiary).map(e => e.id));
+  }, [elders]);
+
+  const beneficiaries = elders.filter(elder => elder.nutritionBeneficiary);
+  const nonBeneficiaries = elders.filter(elder => !elder.nutritionBeneficiary);
+
+  const handlePrint = () => {
+    const printContent = `
+      <html>
+        <head>
+          <title>Lista de Entrega de Bolsas de Nutrición</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 2rem; color: #333; }
+            h1, p { text-align: center; }
+            h1 { font-size: 1.5rem; }
+            p { font-size: 1.2rem; font-weight: normal; margin-bottom: 2rem; }
+            table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; }
+            th, td { border: 1px solid #ccc; padding: 0.75rem; text-align: left; }
+            th { background-color: #f4f4f4; }
+            .signature-col { height: 3rem; }
+            .date { text-align: right; margin-bottom: 1rem; font-size: 1rem; }
+          </style>
+        </head>
+        <body>
+          <h1>Lista de Entrega de Bolsas de Nutrición</h1>
+          <p class="date"><strong>Fecha de Emisión:</strong> ${new Date().toLocaleDateString('es-ES')}</p>
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 40%;">Nombre y Apellido</th>
+                <th style="width: 25%;">Cédula</th>
+                <th style="width: 35%;">Firma</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${beneficiaries.length > 0
+                ? beneficiaries.map(b => `
+                  <tr>
+                    <td>${b.name}</td>
+                    <td>${b.cedula}</td>
+                    <td class="signature-col"></td>
+                  </tr>
+                `).join('')
+                : '<tr><td colspan="3" style="text-align: center;">No hay beneficiarios asignados.</td></tr>'
+              }
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    printWindow.print();
+  };
 
   const handleToggleSelection = (elderId) => {
     setSelectedElders(prev =>
@@ -18,26 +73,16 @@ function NutritionView({ elders, setElders, toast }) {
     );
   };
 
-  const handleSaveChanges = () => {
-    const updatedElders = elders.map(elder => ({
-      ...elder,
-      nutritionBeneficiary: selectedElders.includes(elder.id)
-    }));
-    setElders(updatedElders);
+  const handleSaveChanges = (e) => {
+    e.preventDefault();
+    onSave(selectedElders);
     setIsManaging(false);
-    toast({
-      title: "Beneficiarios actualizados",
-      description: "La lista de beneficiarios de nutrición ha sido guardada.",
-    });
   };
 
   const handleCancel = () => {
     setSelectedElders(elders.filter(e => e.nutritionBeneficiary).map(e => e.id));
     setIsManaging(false);
   };
-
-  const beneficiaries = elders.filter(elder => elder.nutritionBeneficiary);
-  const nonBeneficiaries = elders.filter(elder => !elder.nutritionBeneficiary);
 
   return (
     <motion.div
@@ -46,13 +91,19 @@ function NutritionView({ elders, setElders, toast }) {
       exit={{ opacity: 0, y: -20 }}
       className="space-y-6"
     >
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <h2 className="text-2xl font-bold text-gray-800">Bolsas de Nutrición</h2>
         {!isManaging ? (
-          <Button onClick={() => setIsManaging(true)} className="btn-primary">
-            <Edit className="w-4 h-4 mr-2" />
-            Gestionar Beneficiarios
-          </Button>
+          <div className="flex space-x-2">
+            <Button onClick={handlePrint} variant="outline" disabled={beneficiaries.length === 0}>
+              <Printer className="w-4 h-4 mr-2" />
+              Imprimir Lista
+            </Button>
+            <Button onClick={() => setIsManaging(true)} className="btn-primary">
+              <Edit className="w-4 h-4 mr-2" />
+              Gestionar Beneficiarios
+            </Button>
+          </div>
         ) : (
           <div className="flex space-x-2">
             <Button onClick={handleCancel} variant="outline">

@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useToast } from '@/components/ui/use-toast';
-import { initialElders, initialActivities } from '@/data/mockData';
+import { supabase } from '@/lib/supabaseClient';
 
 export const useApp = () => {
+  const [session, setSession] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
   const [showLogin, setShowLogin] = useState(false);
   const [currentView, setCurrentView] = useState('dashboard');
   const [elders, setElders] = useState([]);
@@ -17,70 +19,72 @@ export const useApp = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    const savedElders = localStorage.getItem('elders');
-    const savedActivities = localStorage.getItem('activities');
-    const savedAuth = localStorage.getItem('isAuthenticated');
-    
-    setElders(savedElders ? JSON.parse(savedElders) : initialElders);
-    setActivities(savedActivities ? JSON.parse(savedActivities) : initialActivities);
-    if (savedAuth) {
-      setIsAuthenticated(JSON.parse(savedAuth));
-    }
-  }, []);
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setSession(session);
+      setIsAuthenticated(!!session);
+      setAuthLoading(false);
+    };
+    checkSession();
 
-  useEffect(() => {
-    localStorage.setItem('elders', JSON.stringify(elders));
-  }, [elders]);
+    const { data: { subscription: authListener } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setIsAuthenticated(!!session);
+      if (_event === 'SIGNED_IN') {
+        setShowLogin(false);
+      }
+    });
 
-  useEffect(() => {
-    localStorage.setItem('activities', JSON.stringify(activities));
-  }, [activities]);
+    const fetchData = async () => {
+      const { data: eldersData, error: eldersError } = await supabase.from('elders').select('*');
+      if (eldersError) {
+        console.error('Error fetching elders:', eldersError);
+        toast({ title: "Error al cargar Adultos Mayores", description: eldersError.message, variant: "destructive" });
+      } else {
+        setElders(eldersData);
+      }
 
-  useEffect(() => {
-    localStorage.setItem('isAuthenticated', JSON.stringify(isAuthenticated));
-  }, [isAuthenticated]);
+      const { data: activitiesData, error: activitiesError } = await supabase.from('activities').select('*');
+      if (activitiesError) {
+        console.error('Error fetching activities:', activitiesError);
+        toast({ title: "Error al cargar Actividades", description: activitiesError.message, variant: "destructive" });
+      } else {
+        setActivities(activitiesData);
+      }
+    };
+    fetchData();
 
-  const handleLogin = (e) => {
+    return () => {
+      authListener?.unsubscribe();
+    };
+  }, [toast]);
+
+  const handleLogin = async (e) => {
     e.preventDefault();
-    const username = e.target.username.value;
+    const email = e.target.email.value;
     const password = e.target.password.value;
     
-    if (username === 'admin' && password === 'admin123') {
-      setIsAuthenticated(true);
-      setShowLogin(false);
-      toast({
-        title: "¡Bienvenido!",
-        description: "Has iniciado sesión correctamente.",
-      });
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+
+    if (error) {
+      toast({ title: "Error de autenticación", description: "Correo o contraseña incorrectos.", variant: "destructive" });
     } else {
-      toast({
-        title: "Error de autenticación",
-        description: "Usuario o contraseña incorrectos.",
-        variant: "destructive",
-      });
+      toast({ title: "¡Bienvenido!", description: "Has iniciado sesión correctamente." });
     }
   };
 
-  const handleLogout = () => {
-    setIsAuthenticated(false);
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     setCurrentView('dashboard');
-    toast({
-      title: "Sesión cerrada",
-      description: "Has cerrado sesión correctamente.",
-    });
+    toast({ title: "Sesión cerrada", description: "Has cerrado sesión correctamente." });
   };
 
-  const handleShowLogin = (status) => {
-    setShowLogin(status);
-  };
+  const handleShowLogin = (status) => setShowLogin(status);
 
   const openModal = (type, data = null) => {
     setModalType(type);
-    if (type.includes('elder')) {
-      setSelectedElder(data);
-    } else if (type.includes('activity') || type.includes('raffle')) {
-      setSelectedActivity(data);
-    }
+    if (type.includes('elder') || type.includes('health')) setSelectedElder(data);
+    else if (type.includes('activity') || type.includes('raffle')) setSelectedActivity(data);
     setShowModal(true);
   };
 
@@ -91,75 +95,211 @@ export const useApp = () => {
     setModalType('');
   };
 
-  const handleSaveElder = (elderData) => {
+  const handleSaveElder = async (elderData) => {
+    const dataToSubmit = {
+        name: elderData.name,
+        age: elderData.age,
+        cedula: elderData.cedula,
+        phone: elderData.phone,
+        address: elderData.address,
+        latitude: elderData.latitude, // Add latitude
+        longitude: elderData.longitude, // Add longitude
+        emergencyContact: elderData.emergencyContact,
+        pathologies: elderData.pathologies,
+        medications: elderData.medications,
+        disabilities: elderData.disabilities,
+        nutritionBeneficiary: elderData.nutritionBeneficiary,
+        status: elderData.status || 'active',
+        imageUrl: elderData.imageUrl || '',
+    };
+
     if (selectedElder) {
-      setElders(elders.map(elder => 
-        elder.id === selectedElder.id ? { ...elderData, id: selectedElder.id } : elder
-      ));
-      toast({
-        title: "Perfil actualizado",
-        description: "Los datos del adulto mayor han sido actualizados.",
-      });
+      const { data, error } = await supabase
+        .from('elders')
+        .update(dataToSubmit)
+        .eq('id', selectedElder.id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error updating elder:', error);
+        toast({ title: "Error al actualizar", description: error.message, variant: "destructive" });
+      } else {
+        setElders(elders.map(elder => elder.id === selectedElder.id ? data : elder));
+        toast({ title: "Perfil actualizado", description: "Los datos han sido actualizados." });
+        closeModal();
+      }
     } else {
-      const newElder = { ...elderData, id: Date.now(), status: 'active', imageUrl: elderData.imageUrl || '' };
-      setElders([...elders, newElder]);
-      toast({
-        title: "Perfil creado",
-        description: "Nuevo adulto mayor registrado exitosamente.",
-      });
+      const { data, error } = await supabase
+        .from('elders')
+        .insert([dataToSubmit])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating elder:', error);
+        toast({ title: "Error al crear", description: error.message, variant: "destructive" });
+      } else {
+        setElders([...elders, data]);
+        toast({ title: "Perfil creado", description: "Nuevo adulto mayor registrado." });
+        closeModal();
+      }
     }
-    closeModal();
   };
 
-  const handleDeleteElder = (elderId) => {
-    setElders(elders.filter(elder => elder.id !== elderId));
-    toast({
-      title: "Perfil eliminado",
-      description: "El perfil del adulto mayor ha sido eliminado.",
-    });
+  const handleDeleteElder = async (elderId) => {
+    const { error } = await supabase.from('elders').delete().eq('id', elderId);
+    if (error) {
+      console.error('Error deleting elder:', error);
+      toast({ title: "Error al eliminar", description: error.message, variant: "destructive" });
+    } else {
+      setElders(elders.filter(elder => elder.id !== elderId));
+      toast({ title: "Perfil eliminado", description: "El perfil ha sido eliminado." });
+    }
   };
 
-  const handleSaveActivity = (activityData) => {
+  const handleSaveActivity = async (activityData) => {
+    const dataToSubmit = {
+        title: activityData.title,
+        type: 'cultural',
+        date: activityData.date,
+        time: activityData.time,
+        location: activityData.location,
+        description: activityData.description,
+        participants: activityData.participants || [],
+        status: activityData.status || 'scheduled',
+    };
+
     if (selectedActivity) {
-      setActivities(activities.map(act => act.id === selectedActivity.id ? { ...activityData, id: act.id } : act));
-      toast({ title: "Actividad actualizada", description: "La actividad ha sido actualizada." });
+      const { data, error } = await supabase.from('activities').update(dataToSubmit).eq('id', selectedActivity.id).select().single();
+      if (error) {
+        toast({ title: "Error al actualizar", description: error.message, variant: "destructive" });
+      } else {
+        setActivities(activities.map(act => act.id === selectedActivity.id ? data : act));
+        toast({ title: "Actividad actualizada" });
+        closeModal();
+      }
     } else {
-      const newActivity = { ...activityData, id: Date.now(), status: 'scheduled', type: 'cultural' };
-      setActivities([...activities, newActivity]);
-      toast({ title: "Actividad creada", description: "Nueva actividad registrada." });
+      const { data, error } = await supabase.from('activities').insert([dataToSubmit]).select().single();
+      if (error) {
+        toast({ title: "Error al crear", description: error.message, variant: "destructive" });
+      } else {
+        setActivities([...activities, data]);
+        toast({ title: "Actividad creada" });
+        closeModal();
+      }
     }
-    closeModal();
   };
 
-  const handleSaveRaffle = (raffleData) => {
+  const handleSaveRaffle = async (raffleData) => {
+    const dataToSubmit = {
+        title: raffleData.title,
+        type: 'raffle',
+        date: raffleData.date,
+        prize: raffleData.prize,
+        participants: raffleData.participants || [],
+        status: raffleData.status || 'active',
+        winner_id: raffleData.winner_id || null,
+    };
+    
     if (selectedActivity) {
-      setActivities(activities.map(act => act.id === selectedActivity.id ? { ...raffleData, id: act.id } : act));
-      toast({ title: "Rifa actualizada", description: "La rifa ha sido actualizada." });
+      const { data, error } = await supabase.from('activities').update(dataToSubmit).eq('id', selectedActivity.id).select().single();
+      if (error) {
+        toast({ title: "Error al actualizar", description: error.message, variant: "destructive" });
+      } else {
+        setActivities(activities.map(act => act.id === selectedActivity.id ? data : act));
+        toast({ title: "Rifa actualizada" });
+        closeModal();
+      }
     } else {
-      const newRaffle = { ...raffleData, id: Date.now(), status: 'active', type: 'raffle' };
-      setActivities([...activities, newRaffle]);
-      toast({ title: "Rifa creada", description: "Nueva rifa registrada." });
+      const { data, error } = await supabase.from('activities').insert([dataToSubmit]).select().single();
+      if (error) {
+        toast({ title: "Error al crear", description: error.message, variant: "destructive" });
+      } else {
+        setActivities([...activities, data]);
+        toast({ title: "Rifa creada" });
+        closeModal();
+      }
     }
-    closeModal();
   };
+
+  const handleDrawRaffleWinner = async (raffle) => {
+    if (!raffle.participants || raffle.participants.length === 0) {
+        toast({ title: "No hay participantes", variant: "destructive" });
+        return;
+    }
+    const winnerId = raffle.participants[Math.floor(Math.random() * raffle.participants.length)];
+    const winnerInfo = elders.find(e => e.id === winnerId);
+
+    const { data, error } = await supabase.from('activities').update({ status: 'completed', winner_id: winnerId }).eq('id', raffle.id).select().single();
+    if (error) {
+      toast({ title: "Error al sortear", description: error.message, variant: "destructive" });
+    } else {
+      setActivities(activities.map(act => (act.id === raffle.id ? data : act)));
+      toast({ title: "¡Tenemos un ganador!", description: `${winnerInfo?.name || 'Desconocido'} ha ganado.` });
+    }
+  };
+
+  const handleSaveNutritionBeneficiaries = async (selectedIds) => {
+    try {
+      const toEnable = selectedIds;
+      const toDisable = elders.filter(e => e.nutritionBeneficiary && !toEnable.includes(e.id)).map(e => e.id);
+      
+      const [enableResult, disableResult] = await Promise.all([
+        toEnable.length > 0 ? supabase.from('elders').update({ nutritionBeneficiary: true }).in('id', toEnable) : Promise.resolve({ error: null }),
+        toDisable.length > 0 ? supabase.from('elders').update({ nutritionBeneficiary: false }).in('id', toDisable) : Promise.resolve({ error: null }),
+      ]);
+
+      if (enableResult.error) throw enableResult.error;
+      if (disableResult.error) throw disableResult.error;
+
+      const updatedElders = elders.map(elder => ({ ...elder, nutritionBeneficiary: toEnable.includes(elder.id) }));
+      setElders(updatedElders);
+      toast({ title: "Beneficiarios actualizados", variant: "success" });
+    } catch (error) {
+      toast({ title: "Error al guardar", description: error.message, variant: "destructive" });
+    }
+  };
+  
+  const handleSaveHealthRecord = async (healthData) => {
+    const { recordType, description, selectedElders: targetEldersIds } = healthData;
+    try {
+      const updates = targetEldersIds.map(elderId => {
+        const elder = elders.find(e => e.id === elderId);
+        const currentRecords = elder?.[recordType] || [];
+        const updatedRecords = [...currentRecords, description];
+        return supabase.from('elders').update({ [recordType]: updatedRecords }).eq('id', elderId).select().single();
+      });
+      const results = await Promise.all(updates);
+      const updatedElders = elders.map(elder => {
+        const updatedRecord = results.find(r => r.data && r.data.id === elder.id);
+        return updatedRecord ? updatedRecord.data : elder;
+      });
+      setElders(updatedElders);
+      toast({ title: "Registro de Salud Guardado", variant: "success" });
+    } catch (error) {
+      toast({ title: "Error al Guardar", description: error.message, variant: "destructive" });
+    }
+  };
+
 
   const filteredElders = elders.filter(elder => {
-    const matchesSearch = elder.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         elder.cedula.includes(searchTerm);
-    const matchesFilter = filterStatus === 'all' || elder.status === filterStatus;
-    return matchesSearch && matchesFilter;
+    const nameMatch = elder.name?.toLowerCase().includes(searchTerm.toLowerCase());
+    const cedulaMatch = elder.cedula?.includes(searchTerm);
+    return (nameMatch || cedulaMatch) && (filterStatus === 'all' || elder.status === filterStatus);
   });
 
   const stats = {
     totalElders: elders.length,
     activeElders: elders.filter(e => e.status === 'active').length,
     nutritionBeneficiaries: elders.filter(e => e.nutritionBeneficiary).length,
-    upcomingActivities: activities.filter(a => new Date(a.date) >= new Date() && a.status === 'scheduled').length,
-    pathologiesCount: elders.reduce((acc, e) => acc + e.pathologies.length, 0),
-    disabilitiesCount: elders.reduce((acc, e) => acc + e.disabilities.length, 0),
+    upcomingActivities: activities.filter(a => a.date && new Date(a.date) >= new Date() && a.status === 'scheduled').length,
+    pathologiesCount: elders.reduce((acc, e) => acc + (e.pathologies?.length || 0), 0),
+    disabilitiesCount: elders.reduce((acc, e) => acc + (e.disabilities?.length || 0), 0),
   };
 
   return {
+    authLoading,
     isAuthenticated,
     showLogin,
     handleLogin,
@@ -182,6 +322,9 @@ export const useApp = () => {
     handleDeleteElder,
     handleSaveActivity,
     handleSaveRaffle,
+    handleDrawRaffleWinner,
+    handleSaveNutritionBeneficiaries,
+    handleSaveHealthRecord,
     toast,
     filteredElders,
     searchTerm,

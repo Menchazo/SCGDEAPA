@@ -8,10 +8,22 @@ import Login from '@/components/auth/Login';
 import ElderModal from '@/components/modals/ElderModal';
 import ActivityModal from '@/components/modals/ActivityModal';
 import RaffleModal from '@/components/modals/RaffleModal';
+import HealthModal from '@/components/modals/HealthModal';
 import { AnimatePresence } from 'framer-motion';
+
+// A simple loading component
+const AppLoading = () => (
+  <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="text-center">
+      <p className="text-lg font-semibold text-gray-700">Cargando...</p>
+      <p className="text-sm text-gray-500">Iniciando la aplicación</p>
+    </div>
+  </div>
+);
 
 function App() {
   const {
+    authLoading, // Get the loading state
     isAuthenticated,
     showLogin,
     handleLogin,
@@ -20,6 +32,7 @@ function App() {
     currentView,
     setCurrentView,
     elders,
+    setElders,
     activities,
     setActivities,
     stats,
@@ -27,6 +40,9 @@ function App() {
     handleDeleteElder,
     handleSaveActivity,
     handleSaveRaffle,
+    handleDrawRaffleWinner,
+    handleSaveNutritionBeneficiaries,
+    handleSaveHealthRecord,
     showModal,
     modalType,
     selectedElder,
@@ -41,10 +57,17 @@ function App() {
     setFilterStatus,
   } = useApp();
 
+  // Show a loading screen while checking for authentication
+  if (authLoading) {
+    return <AppLoading />;
+  }
+
+  // Show login screen if triggered
   if (showLogin) {
     return <Login onLogin={handleLogin} onBack={() => handleShowLogin(false)} />;
   }
   
+  // If not authenticated, show the public page
   if (!isAuthenticated) {
     return (
       <>
@@ -63,6 +86,7 @@ function App() {
     );
   }
 
+  // If authenticated, show the admin layout
   return (
     <>
       <AdminLayout
@@ -70,6 +94,7 @@ function App() {
         setCurrentView={setCurrentView}
         handleLogout={handleLogout}
         elders={elders}
+        setElders={setElders}
         activities={activities}
         setActivities={setActivities}
         stats={stats}
@@ -83,6 +108,10 @@ function App() {
         onAddRaffle={() => openModal('add-raffle')}
         onEditRaffle={(raffle) => openModal('edit-raffle', raffle)}
         onViewRaffle={(raffle) => openModal('view-raffle', raffle)}
+        onDrawRaffleWinner={handleDrawRaffleWinner}
+        onSaveNutritionBeneficiaries={handleSaveNutritionBeneficiaries}
+        onSaveHealthRecord={handleSaveHealthRecord}
+        onOpenHealthModal={(type, elder) => openModal(type, elder)}
         toast={toast}
         filteredElders={filteredElders}
         searchTerm={searchTerm}
@@ -117,6 +146,16 @@ function App() {
             onSave={handleSaveRaffle}
             onClose={closeModal}
             elders={elders}
+            toast={toast}
+          />
+        )}
+        {showModal && modalType.includes('health') && (
+          <HealthModal
+            type={modalType}
+            elder={selectedElder}
+            elders={elders}
+            onSave={handleSaveHealthRecord}
+            onClose={closeModal}
             toast={toast}
           />
         )}
