@@ -3,6 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Search, User, Users, CheckCircle, Heart, Calendar as CalendarIcon, X, Briefcase, GraduationCap, Database, Code, Wind, Zap, MapPin, Move } from 'lucide-react';
+import UpcomingActivities from '@/components/ui/UpcomingActivities';
 
 const UPTAG_LOGO_URL = "https://i.ibb.co/zTmjVWkm/Logo-UPTAG-NB.png";
 
@@ -279,6 +280,8 @@ const PublicPage = ({ elders, activities, stats, onAdminLogin }) => {
                 <StatCard icon={CalendarIcon} label="Actividades Próximas" value={stats.upcomingActivities} color="purple" />
              </div>
         </div>
+
+        <UpcomingActivities activities={activities} />
         
         <div className="pt-8">
            <Calendar activities={activities} />
