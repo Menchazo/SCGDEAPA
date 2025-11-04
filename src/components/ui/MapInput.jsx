@@ -12,7 +12,6 @@ import shadowUrl from 'leaflet/dist/images/marker-shadow.png';
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({ iconRetinaUrl, iconUrl, shadowUrl });
 
-// Default center (e.g., center of the community)
 const defaultCenter = { lat: 11.4176, lng: -70.2645 };
 
 const LocationMarker = ({ position, setPosition, isViewOnly }) => {
@@ -44,14 +43,14 @@ const LocationMarker = ({ position, setPosition, isViewOnly }) => {
   ) : null;
 };
 
-// This component will handle map view changes
 const MapUpdater = ({ center, zoom }) => {
     const map = useMap();
     useEffect(() => {
-        if (center) {
-            map.flyTo(center, zoom, {
+        // Only fly to the center if it's a valid position
+        if (center && typeof center.lat === 'number') {
+            map.flyTo([center.lat, center.lng], zoom, {
                 animate: true,
-                duration: 1.5
+                duration: 1.0
             });
         }
     }, [center, zoom, map]);
@@ -59,59 +58,68 @@ const MapUpdater = ({ center, zoom }) => {
 }
 
 const MapInput = ({ value, onChange, isViewOnly = false }) => {
-  const [currentPosition, setCurrentPosition] = useState({ lat: null, lng: null });
+  const [markerPosition, setMarkerPosition] = useState({ lat: null, lng: null });
+  const [viewCenter, setViewCenter] = useState(defaultCenter);
+  const [zoom, setZoom] = useState(13);
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
   const geocodeTimerRef = useRef(null);
 
-  // Set position from parent's value
   useEffect(() => {
-    if (value && typeof value.lat === 'number' && typeof value.lng === 'number') {
-      setCurrentPosition(value);
-    } else {
-      setCurrentPosition({ lat: null, lng: null });
+    // If there's an existing value (editing mode), use it.
+    if (value && typeof value.lat === 'number') {
+      setMarkerPosition(value);
+      setViewCenter(value);
+      setZoom(17);
+      return; 
     }
-  }, [value]);
 
-  // Handle automatic geolocation on component mount
-  useEffect(() => {
-    if (!isViewOnly && (!value || value.lat === null)) {
-        setIsLocating(true);
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                const { latitude, longitude } = position.coords;
-                const newPos = { lat: latitude, lng: longitude };
-                setCurrentPosition(newPos);
-                setIsLocating(false);
-            },
-            (error) => {
-                console.warn(`Geolocation error: ${error.message}. Defaulting to center.`);
-                setCurrentPosition(defaultCenter);
-                setIsLocating(false);
-            },
-            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-        );
+    if (isViewOnly) {
+        setViewCenter(defaultCenter);
+        setZoom(13);
+        return;
     }
-  }, [isViewOnly, value]);
 
-  // Fetch address (reverse geocoding) when position changes
+    // For new entries, try to geolocate the user.
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+        (position) => {
+            const { latitude, longitude } = position.coords;
+            const newPos = { lat: latitude, lng: longitude };
+            setMarkerPosition(newPos);
+            setViewCenter(newPos);
+            setZoom(17);
+            setIsLocating(false);
+        },
+        (error) => {
+            console.warn(`Geolocation error: ${error.message}.`);
+            // Keep marker null, just center map on default.
+            setViewCenter(defaultCenter);
+            setZoom(13);
+            setIsLocating(false);
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  }, []); // Run only once on mount
+
+  // Fetch address (reverse geocoding) when marker position changes
   useEffect(() => {
-    if (!currentPosition || typeof currentPosition.lat !== 'number') {
+    if (!markerPosition || typeof markerPosition.lat !== 'number') {
       return;
     }
 
     clearTimeout(geocodeTimerRef.current);
     geocodeTimerRef.current = setTimeout(() => {
       setIsGeocoding(true);
-      fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${currentPosition.lat}&lon=${currentPosition.lng}`)
+      fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${markerPosition.lat}&lon=${markerPosition.lng}`)
         .then(res => res.json())
         .then(data => {
           const address = data.display_name || 'Ubicación no encontrada.';
-          onChange({ lat: currentPosition.lat, lng: currentPosition.lng, address });
+          onChange({ lat: markerPosition.lat, lng: markerPosition.lng, address });
         })
         .catch(error => {
           console.error("Geocoding error:", error);
-          onChange({ lat: currentPosition.lat, lng: currentPosition.lng, address: 'Error al obtener la dirección.' });
+          onChange({ lat: markerPosition.lat, lng: markerPosition.lng, address: 'Error al obtener la dirección.' });
         })
         .finally(() => {
           setIsGeocoding(false);
@@ -119,37 +127,40 @@ const MapInput = ({ value, onChange, isViewOnly = false }) => {
     }, 500);
 
     return () => clearTimeout(geocodeTimerRef.current);
-  }, [currentPosition.lat, currentPosition.lng, onChange]);
-
-  const mapCenter = useMemo(() => (
-    (currentPosition && currentPosition.lat) ? [currentPosition.lat, currentPosition.lng] : [defaultCenter.lat, defaultCenter.lng]
-  ), [currentPosition]);
+  }, [markerPosition, onChange]);
 
   const handleRecenter = () => {
     setIsLocating(true);
     navigator.geolocation.getCurrentPosition(
         (position) => {
             const { latitude, longitude } = position.coords;
-            setCurrentPosition({ lat: latitude, lng: longitude });
+            const newPos = { lat: latitude, lng: longitude };
+            setMarkerPosition(newPos); // Update marker
+            setViewCenter(newPos);      // AND update map view
+            setZoom(17);
             setIsLocating(false);
         },
         (error) => {
             console.error("Error recentering:", error);
             setIsLocating(false);
-            // Optionally show a toast or alert to the user
         }
     );
   };
 
   return (
     <div className="h-72 w-full rounded-lg overflow-hidden relative border border-gray-300">
-      <MapContainer center={mapCenter} zoom={15} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }}>
+      <MapContainer 
+        center={[viewCenter.lat, viewCenter.lng]} 
+        zoom={zoom} 
+        scrollWheelZoom={true} 
+        style={{ height: '100%', width: '100%' }}
+       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        <LocationMarker position={currentPosition} setPosition={setCurrentPosition} isViewOnly={isViewOnly} />
-        <MapUpdater center={mapCenter} zoom={currentPosition.lat ? 17 : 15} />
+        <LocationMarker position={markerPosition} setPosition={setMarkerPosition} isViewOnly={isViewOnly} />
+        <MapUpdater center={viewCenter} zoom={zoom} />
       </MapContainer>
 
       {!isViewOnly && (
@@ -171,7 +182,7 @@ const MapInput = ({ value, onChange, isViewOnly = false }) => {
 
       {(isGeocoding || isLocating) && (
         <div className="absolute bottom-2 left-2 z-[1000] bg-white bg-opacity-80 py-1 px-2 rounded-md shadow-lg text-xs text-gray-800">
-          <p>{isLocating ? 'Obteniendo ubicación actual...' : 'Obteniendo dirección...'}</p>
+          <p>{isLocating ? 'Obteniendo ubicación...' : 'Obteniendo dirección...'}</p>
         </div>
       )}
     </div>

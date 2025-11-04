@@ -16,17 +16,17 @@ const Sidebar = ({ currentView, setCurrentView, handleLogout, sidebarOpen, setSi
 
   const handleNavClick = (view) => {
     setCurrentView(view);
-    setSidebarOpen(false);
+    setSidebarOpen(false); // Close sidebar on mobile after navigation
   };
 
   return (
     <div className={`fixed inset-y-0 left-0 z-50 w-64 glass-effect transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 lg:translate-x-0`}>
       <div className="flex items-center justify-between p-4 border-b border-white/20">
-        <div className="flex items-center space-x-2">
-          <img src={UPTAG_LOGO_URL} alt="UPTAG Logo" className="w-12 h-12" />
+        <div className="flex items-center space-x-3">
+          <img src={UPTAG_LOGO_URL} alt="UPTAG Logo" className="w-10 h-10" />
           <div>
-            <h2 className="font-bold text-gray-800">Sistema</h2>
-            <p className="text-xs text-gray-600">Gestión UPTAG</p>
+            <h2 className="font-bold text-gray-800">Sistema de Gestión</h2>
+            <p className="text-sm text-gray-600">Pantano Abajo I</p>
           </div>
         </div>
         <Button
@@ -41,10 +41,14 @@ const Sidebar = ({ currentView, setCurrentView, handleLogout, sidebarOpen, setSi
 
       <nav className="p-4 space-y-2">
         {navItems.map(item => (
-          <div key={item.id} className={`sidebar-item ${currentView === item.id ? 'active' : ''}`} onClick={() => handleNavClick(item.id)}>
+          <button 
+            key={item.id} 
+            className={`sidebar-item ${currentView === item.id ? 'active' : ''}`}
+            onClick={() => handleNavClick(item.id)}
+          >
             <item.icon className="w-5 h-5" />
             <span>{item.label}</span>
-          </div>
+          </button>
         ))}
       </nav>
 

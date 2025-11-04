@@ -1,10 +1,57 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Search, UserPlus, MoreVertical, Edit, Trash2, Eye, Users, User } from 'lucide-react';
+import { Search, UserPlus, MoreVertical, Edit, Trash2, Eye, Users, User, FileDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import * as XLSX from 'xlsx';
 
 function EldersView({ elders, searchTerm, setSearchTerm, filterStatus, setFilterStatus, onEdit, onDelete, onAdd, onView }) {
+
+  const handleExport = () => {
+    // 1. Filter the data based on current search and filter status
+    const filteredData = elders.filter(elder => {
+      const searchTermLower = searchTerm.toLowerCase();
+      const matchesSearch = elder.name.toLowerCase().includes(searchTermLower) || elder.cedula.includes(searchTermLower);
+      const matchesStatus = filterStatus === 'all' || (filterStatus === 'active' && elder.status === 'active') || (filterStatus === 'inactive' && elder.status !== 'active');
+      return matchesSearch && matchesStatus;
+    });
+
+    // 2. Map data to a user-friendly format for the Excel sheet
+    const dataToExport = filteredData.map(elder => ({
+        'Nombre Completo': elder.name,
+        'Cédula': elder.cedula,
+        'Edad': elder.age,
+        'Fecha de Nacimiento': new Date(elder.birth_date).toLocaleDateString('es-ES'),
+        'Teléfono': elder.phone || 'N/A',
+        'Dirección': elder.address || 'N/A',
+        'Beneficiario de Nutrición': elder.nutrition_beneficiary ? 'Sí' : 'No',
+        'Estado': elder.status === 'active' ? 'Activo' : 'Inactivo',
+    }));
+
+    // 3. Create a worksheet from the formatted data
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
+
+    // 4. (Optional but recommended) Set column widths for better readability
+    const colWidths = [
+        { wch: 30 }, // Nombre Completo
+        { wch: 15 }, // Cédula
+        { wch: 10 }, // Edad
+        { wch: 20 }, // Fecha de Nacimiento
+        { wch: 15 }, // Teléfono
+        { wch: 45 }, // Dirección
+        { wch: 25 }, // Beneficiario de Nutrición
+        { wch: 15 }, // Estado
+    ];
+    ws['!cols'] = colWidths;
+
+    // 5. Create a new workbook and append the worksheet
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Adultos Mayores');
+
+    // 6. Trigger the file download
+    XLSX.writeFile(wb, 'Listado_Adultos_Mayores.xlsx');
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -39,9 +86,15 @@ function EldersView({ elders, searchTerm, setSearchTerm, filterStatus, setFilter
             <UserPlus className="w-4 h-4 mr-2" />
             Agregar
           </Button>
+
+          <Button onClick={handleExport} className="btn-secondary">
+            <FileDown className="w-4 h-4 mr-2" />
+            Exportar
+          </Button>
         </div>
       </div>
 
+      {/* Rest of the component remains the same... */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {elders.map(elder => (
           <motion.div
