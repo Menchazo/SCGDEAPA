@@ -2,7 +2,7 @@ import React from 'react';
 import { Users, Calendar, Gift, Heart, Shield, LogOut, Activity, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-const UPTAG_LOGO_URL = "https://i.ibb.co/zTmjVWkm/Logo-UPTAG-NB.png";
+const UPTAG_LOGO_URL = "https://i.ibb.co/9FtcY2z/366288-removebg-preview.png";
 
 const Sidebar = ({ currentView, setCurrentView, handleLogout, sidebarOpen, setSidebarOpen }) => {
   const navItems = [
