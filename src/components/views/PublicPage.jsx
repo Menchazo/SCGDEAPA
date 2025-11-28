@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Search, User, Users, CheckCircle, Heart, Calendar as CalendarIcon, X, Briefcase, GraduationCap, Database, Code, Wind, Zap, MapPin, Move } from 'lucide-react';
 import UpcomingActivities from '@/components/ui/UpcomingActivities';
 
-const UPTAG_LOGO_URL = "https://i.ibb.co/zTmjVWkm/Logo-UPTAG-NB.png";
+const UPTAG_LOGO_URL = "https://i.ibb.co/9FtcY2z/366288-removebg-preview.png";
 
 const StatCard = ({ icon, label, value, color }) => {
   const Icon = icon;
