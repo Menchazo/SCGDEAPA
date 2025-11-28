@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 
-const UPTAG_LOGO_URL = "https://i.ibb.co/zTmjVWkm/Logo-UPTAG-NB.png";
+const UPTAG_LOGO_URL = "https://i.ibb.co/9FtcY2z/366288-removebg-preview.png";
 
 const Login = ({ onLogin, onBack }) => {
   return (
